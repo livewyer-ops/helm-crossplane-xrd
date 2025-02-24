@@ -1,0 +1,14 @@
+{{- if and .Values.providers.aws.enabled .Values.tests.enabled }}
+
+apiVersion: aws.livewyer.io/v1alpha1
+kind: XVPC
+metadata:
+  name: aws-vpc-test
+spec:
+  providerConfigRef:
+    name: aws-config
+  vpc:
+    cidrBlock: 10.100.0.0/16
+    region: eu-west-1
+
+{{- end }}

@@ -1,0 +1,146 @@
+{{- if .Values.providers.aws.enabled }}
+
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xvpcs.aws.livewyer.io
+spec:
+  group: aws.livewyer.io
+  names:
+    kind: XVPC
+    plural: xvpcs
+  claimNames:
+      kind: VPC
+      plural: vpcs
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                deletionPolicy:
+                  type: string
+                  enum:
+                    - Delete
+                    - Orphan
+                  default: Delete
+                managementPolicies:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - Create
+                      - Update
+                      - Observe
+                      - Delete
+                  default: ["Create", "Update", "Observe", "Delete"]
+                providerConfigRef:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                vpc:
+                  type: object
+                  properties:
+                    region:
+                      type: string
+                    assignGeneratedIpv6CidrBlock:
+                      type: boolean
+                      default: false
+                    cidrBlock:
+                      type: string
+                      default: 10.0.0.0/16
+                    enableDnsHostnames:
+                      type: boolean
+                      default: true
+                    enableDnsSupport:
+                      type: boolean
+                      default: true
+                    enableNetworkAddressUsageMetrics:
+                      type: boolean
+                      default: true
+                    instanceTenancy:
+                      type: string
+                      default: default
+                    ipv6CidrBlock:
+                      type: string
+                      default: null
+                    tags:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          default: provisionedBy
+                        values:
+                          type: array
+                          items:
+                            type: string
+                          default: ["xvpcs.aws.livewyer.io"]
+                  required:
+                    - region
+                    - cidrBlock
+
+---
+
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: vpc
+spec:
+  compositeTypeRef:
+    apiVersion: aws.livewyer.io/v1alpha1
+    kind: XVPC
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          - name: vpc
+            base:
+              apiVersion: ec2.aws.upbound.io/v1beta1
+              kind: VPC
+              spec:
+                deletionPolicy: Delete
+                managementPolicies: ["Create", "Update", "Observe", "Delete"]
+                forProvider:
+                  assignGeneratedIpv6CidrBlock: false
+                  enableDnsHostnames: true
+                  enableDnsSupport: true
+                  enableNetworkAddressUsageMetrics: true
+            patches:
+              - fromFieldPath: spec.providerConfigRef.name
+                toFieldPath: spec.providerConfigRef.name
+              - fromFieldPath: spec.deletionPolicy
+                toFieldPath: spec.deletionPolicy
+              - fromFieldPath: spec.managementPolicies
+                toFieldPath: spec.managementPolicies
+              - fromFieldPath: spec.vpc.assignGeneratedIpv6CidrBlock
+                toFieldPath: spec.forProvider.assignGeneratedIpv6CidrBlock
+              - fromFieldPath: spec.vpc.cidrBlock
+                toFieldPath: spec.forProvider.cidrBlock
+              - fromFieldPath: spec.vpc.enableDnsHostnames
+                toFieldPath: spec.forProvider.enableDnsHostnames
+              - fromFieldPath: spec.vpc.enableDnsSupport
+                toFieldPath: spec.forProvider.enableDnsSupport
+              - fromFieldPath: spec.vpc.enableNetworkAddressUsageMetrics
+                toFieldPath: spec.forProvider.enableNetworkAddressUsageMetrics
+              - fromFieldPath: spec.vpc.instanceTenancy
+                toFieldPath: spec.forProvider.instanceTenancy
+              - fromFieldPath: spec.vpc.ipv6CidrBlock
+                toFieldPath: spec.forProvider.ipv6CidrBlock
+              - fromFieldPath: spec.vpc.region
+                toFieldPath: spec.forProvider.region
+    - step: automatically-detect-readiness
+      functionRef:
+        name: function-auto-ready
+
+{{- end }}

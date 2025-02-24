@@ -1,0 +1,10 @@
+providers:
+  aws:
+    enabled: true
+  azure:
+    enabled: false
+  gcp:
+    enabled: false
+
+tests:
+  enabled: true
