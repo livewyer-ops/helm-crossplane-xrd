@@ -55,6 +55,11 @@ spec:
                     cidrBlock:
                       type: string
                       default: 10.0.0.0/16
+                    additionalCidrBlocks:
+                      type: array
+                      items:
+                        type: string
+                      default: []
                     enableDnsHostnames:
                       type: boolean
                       default: true
@@ -69,76 +74,436 @@ spec:
                       default: default
                     ipv6CidrBlock:
                       type: string
-                      default: null
-                    tags:
-                      type: object
-                      properties:
-                        name:
-                          type: string
-                          default: provisionedBy
-                        values:
-                          type: array
-                          items:
+                    subnets:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          availabilityZone:
                             type: string
-                          default: ["xvpcs.aws.livewyer.io"]
+                            default: null
+                          cidrBlock:
+                            type: string
+                            default: null
+                          mapPublicIpOnLaunch:
+                            type: boolean
+                            default: false
+                          type:
+                            type: string
+                            default: public
+                            enum:
+                              - public
+                              - private
+                              - intra
+                          attachNatGateway:
+                            type: boolean
+                            default: false
+                    endpoints:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          serviceName:
+                            type: string
+                          vpcEndpointType:
+                            type: string
+                            default: "Interface"
+                            enum: ["Interface", "Gateway"]
+                      default:
+                        - serviceName: com.amazonaws.ec2
+                        - serviceName: com.amazonaws.ebs
+                        - serviceName: com.amazonaws.eks
+                        - serviceName: com.amazonaws.eks-auth
+                        - serviceName: com.amazonaws.elasticloadbalancing
+                        - serviceName: com.amazonaws.kms
+                        - serviceName: com.amazonaws.s3
+                        - serviceName: com.amazonaws.iam
+                        - serviceName: com.amazonaws.sts
+                        - serviceName: com.amazonaws.account
+                        - serviceName: com.amazonaws.autoscaling
+                        - serviceName: com.amazonaws.backup
+                        - serviceName: com.amazonaws.dynamodb
+                        - serviceName: com.amazonaws.elasticache
+                        - serviceName: com.amazonaws.elasticfilesystem
+                        - serviceName: com.amazonaws.elasticfilesystem-fips
+                        - serviceName: com.amazonaws.grafana
+                        - serviceName: com.amazonaws.outposts
+                        - serviceName: com.amazonaws.rds
+                        - serviceName: com.amazonaws.rds-data
+                        - serviceName: com.amazonaws.secretsmanager
+                        - serviceName: com.amazonaws.tagging
                   required:
                     - region
                     - cidrBlock
+                    - subnets
+                tags:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    value:
+                      type: string
+              required:
+                - vpc
+            status:
+              type: object
+              properties:
+                vpcId:
+                  type: string
+                subnetIds:
+                  type: array
+                  items:
+                    type: string
+                publicSubnetIds:
+                  type: array
+                  items:
+                    type: string
+                privateSubnetIds:
+                  type: array
+                  items:
+                    type: string
+                intraSubnetIds:
+                  type: array
+                  items:
+                    type: string
 
 ---
 
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
-  name: vpc
+  name: vpc.aws.livewyer.io
 spec:
   compositeTypeRef:
     apiVersion: aws.livewyer.io/v1alpha1
     kind: XVPC
   mode: Pipeline
   pipeline:
-    - step: patch-and-transform
+    - step: go-templating
       functionRef:
-        name: function-patch-and-transform
+        name: function-go-templating
       input:
-        apiVersion: pt.fn.crossplane.io/v1beta1
-        kind: Resources
-        resources:
-          - name: vpc
-            base:
-              apiVersion: ec2.aws.upbound.io/v1beta1
-              kind: VPC
-              spec:
-                deletionPolicy: Delete
-                managementPolicies: ["Create", "Update", "Observe", "Delete"]
-                forProvider:
-                  assignGeneratedIpv6CidrBlock: false
-                  enableDnsHostnames: true
-                  enableDnsSupport: true
-                  enableNetworkAddressUsageMetrics: true
-            patches:
-              - fromFieldPath: spec.providerConfigRef.name
-                toFieldPath: spec.providerConfigRef.name
-              - fromFieldPath: spec.deletionPolicy
-                toFieldPath: spec.deletionPolicy
-              - fromFieldPath: spec.managementPolicies
-                toFieldPath: spec.managementPolicies
-              - fromFieldPath: spec.vpc.assignGeneratedIpv6CidrBlock
-                toFieldPath: spec.forProvider.assignGeneratedIpv6CidrBlock
-              - fromFieldPath: spec.vpc.cidrBlock
-                toFieldPath: spec.forProvider.cidrBlock
-              - fromFieldPath: spec.vpc.enableDnsHostnames
-                toFieldPath: spec.forProvider.enableDnsHostnames
-              - fromFieldPath: spec.vpc.enableDnsSupport
-                toFieldPath: spec.forProvider.enableDnsSupport
-              - fromFieldPath: spec.vpc.enableNetworkAddressUsageMetrics
-                toFieldPath: spec.forProvider.enableNetworkAddressUsageMetrics
-              - fromFieldPath: spec.vpc.instanceTenancy
-                toFieldPath: spec.forProvider.instanceTenancy
-              - fromFieldPath: spec.vpc.ipv6CidrBlock
-                toFieldPath: spec.forProvider.ipv6CidrBlock
-              - fromFieldPath: spec.vpc.region
-                toFieldPath: spec.forProvider.region
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{`
+            {{ $id := .observed.composite.resource.metadata.name }}
+            {{ $spec := .observed.composite.resource.spec }}
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: VPC
+            metadata:
+              labels:
+                networks.aws.platform.upbound.io/network-id: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("vpc") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.vpc.region }}
+                cidrBlock: {{ $spec.vpc.cidrBlock }}
+                enableDnsHostnames: {{ $spec.vpc.enableDnsHostnames }}
+                enableDnsSupport: {{ $spec.vpc.enableDnsSupport }}
+                assignGeneratedIpv6CidrBlock: {{ $spec.vpc.assignGeneratedIpv6CidrBlock }}
+                enableNetworkAddressUsageMetrics: {{ $spec.vpc.enableNetworkAddressUsageMetrics }}
+                {{- if $spec.vpc.ipv6CidrBlock }}
+                ipv6CidrBlock: {{ $spec.vpc.ipv6CidrBlock }}
+                {{- end }}
+                tags:
+                  Name: {{ $id }}
+                  {{- if $spec.tags }}
+                  {{ $spec.tags | toYaml | indent 6 }}
+                  {{- end }}
+
+            ---
+            {{- if hasKey $spec.vpc "additionalCidrBlocks" }}
+            {{- range $i, $cidr := $spec.vpc.additionalCidrBlocks }}
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: VPCIPv4CidrBlockAssociation
+            metadata:
+              labels:
+                networks.aws.platform.upbound.io/network-id: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("cidr") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.vpc.region }}
+                cidrBlock: {{ $cidr }}
+                vpcIdSelector:
+                  matchControllerRef: true
+
+            ---
+            {{- end }}
+            {{- end }}
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: InternetGateway
+            metadata:
+              labels:
+                networks.aws.platform.upbound.io/network-id: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("igw") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                vpcIdSelector:
+                  matchControllerRef: true
+                region: {{ $spec.vpc.region }}
+                tags:
+                  Name: {{ $id }}
+                  {{- if $spec.tags }}
+                  {{ $spec.tags | toYaml | indent 6 }}
+                  {{- end }}
+
+            ---
+            {{- range $i, $subnet := $spec.vpc.subnets }}
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: Subnet
+            metadata:
+              labels:
+                availabilityZone: {{ $subnet.availabilityZone }}
+                type: {{ $subnet.type }}
+                networks.aws.platform.upbound.io/network-id: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation (printf "subnet-%s-%s-%s" $subnet.availabilityZone (regexReplaceAll "\\.|\\/" $subnet.cidrBlock "-") $subnet.type) }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.vpc.region }}
+                availabilityZone: {{ $subnet.availabilityZone }}
+                cidrBlock: {{ $subnet.cidrBlock }}
+                {{- if or (eq $subnet.type "public") (eq $subnet.mapPublicIpOnLaunch true) }}
+                mapPublicIpOnLaunch: true
+                {{- end }}
+                vpcIdSelector:
+                  matchControllerRef: true
+                tags:
+                  Name: {{ $id }}
+                  {{- if eq $subnet.type "public" }}
+                  kubernetes.io/role/elb: "1"
+                  {{- else if eq $subnet.type "private" }}
+                  kubernetes.io/role/internal-elb: "1"
+                  {{- end }}
+                  {{- if $spec.tags }}
+                  {{ $spec.tags | toYaml | indent 6 }}
+                  {{- end }}
+
+            ---
+
+            {{- if or (eq $subnet.type "private") (eq $subnet.attachNatGateway true) }}
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: NATGateway
+            metadata:
+              labels:
+                networks.aws.platform.upbound.io/network-id: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("natgw") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.vpc.region }}
+                subnetIdSelector:
+                  matchControllerRef: true
+                connectivityType: public
+                tags:
+                  Name: {{ $id }}
+                  {{- if $spec.tags }}
+                  {{ $spec.tags | toYaml | indent 6 }}
+                  {{- end }}
+
+            ---
+            {{- end }}
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: RouteTable
+            metadata:
+              labels:
+                networks.aws.platform.upbound.io/network-id: {{ $id }}
+                type: {{ $subnet.type }}
+              annotations:
+                {{ setResourceNameAnnotation ("rt") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                vpcIdSelector:
+                  matchControllerRef: true
+                region: {{ $spec.vpc.region }}
+                tags:
+                  Name: {{ $id }}
+                  {{- if $spec.tags }}
+                  {{ $spec.tags | toYaml | indent 6 }}
+                  {{- end }}
+
+            ---
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: Route
+            metadata:
+              labels:
+                networks.aws.platform.upbound.io/network-id: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("route") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                {{- if eq $subnet.type "public" }}
+                destinationCidrBlock: 0.0.0.0/0
+                gatewayIdSelector:
+                  matchControllerRef: true
+                {{- else if or (eq $subnet.type "private") (eq $subnet.attachNatGateway true) }}
+                destinationCidrBlock: 0.0.0.0/0
+                natGatewayIdSelector:
+                  matchControllerRef: true
+                {{- end }}
+                routeTableIdSelector:
+                  matchControllerRef: true
+                region: {{ $spec.vpc.region }}
+
+            ---
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: RouteTableAssociation
+            metadata:
+              labels:
+                networks.aws.platform.upbound.io/network-id: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation (printf "rta-%s-%s-%s" $subnet.availabilityZone (regexReplaceAll "\\.|\\/" $subnet.cidrBlock "-") $subnet.type) }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.vpc.region }}
+                routeTableIdSelector:
+                  matchControllerRef: true
+                subnetIdSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    type: {{ $subnet.type }}
+                    availabilityZone: {{ $subnet.availabilityZone }}
+
+            ---
+            {{- end }}
+            {{- range $i, $endpoint := $spec.endpoints }}
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: VPCEndpoint
+            metadata:
+              labels:
+                networks.aws.platform.upbound.io/network-id: {{ $id }}
+                VPCEndpoint:  {{ $endpoint.serviceName }}
+              annotations:
+                {{ setResourceNameAnnotation ("vpce") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.vpc.region }}
+                serviceName: {{ $endpoint.serviceName }}
+                vpcEndpointType: {{ $endpoint.vpcEndpointType }}
+                vpcIdSelector:
+                  matchControllerRef: true
+                tags:
+                  Name: {{ $id }}
+                  {{- if $spec.tags }}
+                  {{ $spec.tags | toYaml | indent 6 }}
+                  {{- end }}
+
+            ---
+            {{- end }}
+
+            apiVersion: {{ .observed.composite.resource.apiVersion }}
+            kind: {{ .observed.composite.resource.kind }}
+            status:
+            {{- $vpcId := dig "resources" "vpc" "resource" "status" "atProvider" "id" "" $.observed }}
+            {{- if $vpcId }}
+            vpcId: {{ $vpcId }}
+            {{- end }}
+
+            {{- $subnetIds := list }}
+            {{- range $i, $subnet := $spec.subnets }}
+            {{- $subnetId := dig "resources" (printf "subnet-%s-%s" $subnet.availabilityZone $subnet.type) "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed }}
+            {{- if $subnetId }}
+            {{- $subnetIds = append $subnetIds $subnetId }}
+            {{- end }}
+            {{- end }}
+            {{- if $subnetIds }}
+            subnetIds:
+              {{- range $id := $subnetIds }}
+              - {{ $id }}
+              {{- end }}
+            {{- end }}
+
+            {{- $publicSubnetIds := list }}
+            {{- range $i, $subnet := $spec.subnets }}
+            {{- if eq $subnet.type "public" }}
+            {{- $publicSubnetId := dig "resources" (printf "subnet-%s-%s" $subnet.availabilityZone $subnet.type) "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed }}
+            {{- if $publicSubnetId }}
+            {{- $publicSubnetIds = append $publicSubnetIds $publicSubnetId }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- if $publicSubnetIds }}
+            publicSubnetIds:
+              {{- range $id := $publicSubnetIds }}
+              - {{ $id }}
+              {{- end }}
+            {{- end }}
+
+            {{- $privateSubnetIds := list }}
+            {{- range $i, $subnet := $spec.subnets }}
+            {{- if eq $subnet.type "private" }}
+            {{- $privateSubnetId := dig "resources" (printf "subnet-%s-%s" $subnet.availabilityZone $subnet.type) "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed }}
+            {{- if $privateSubnetId }}
+            {{- $privateSubnetIds = append $privateSubnetIds $privateSubnetId }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- if $privateSubnetIds }}
+            privateSubnetIds:
+              {{- range $id := $privateSubnetIds }}
+              - {{ $id }}
+              {{- end }}
+            {{- end }}
+
+            {{- $intraSubnetIds := list }}
+            {{- range $i, $subnet := $spec.subnets }}
+            {{- if eq $subnet.type "intra" }}
+            {{- $intraSubnetId := dig "resources" (printf "subnet-%s-%s" $subnet.availabilityZone $subnet.type) "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed }}
+            {{- if $intraSubnetId }}
+            {{- $intraSubnetIds = append $intraSubnetIds $intraSubnetId }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- if $intraSubnetIds }}
+            intraSubnetIds:
+              {{- range $id := $intraSubnetIds }}
+              - {{ $id }}
+              {{- end }}
+            {{- end }}
+
+            `}}
     - step: automatically-detect-readiness
       functionRef:
         name: function-auto-ready
