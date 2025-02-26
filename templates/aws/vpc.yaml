@@ -59,7 +59,6 @@ spec:
                       type: array
                       items:
                         type: string
-                      default: []
                     enableDnsHostnames:
                       type: boolean
                       default: true
@@ -81,10 +80,8 @@ spec:
                         properties:
                           availabilityZone:
                             type: string
-                            default: null
                           cidrBlock:
                             type: string
-                            default: null
                           mapPublicIpOnLaunch:
                             type: boolean
                             default: false
@@ -98,6 +95,9 @@ spec:
                           attachNatGateway:
                             type: boolean
                             default: false
+                        required:
+                          - availabilityZone
+                          - cidrBlock
                     endpoints:
                       type: array
                       items:
@@ -109,29 +109,35 @@ spec:
                             type: string
                             default: "Interface"
                             enum: ["Interface", "Gateway"]
+                          serviceNamePrefix:
+                            type: string
+                            default: "com.amazonaws"
+                        required:
+                          - serviceName
                       default:
-                        - serviceName: com.amazonaws.ec2
-                        - serviceName: com.amazonaws.ebs
-                        - serviceName: com.amazonaws.eks
-                        - serviceName: com.amazonaws.eks-auth
-                        - serviceName: com.amazonaws.elasticloadbalancing
-                        - serviceName: com.amazonaws.kms
-                        - serviceName: com.amazonaws.s3
-                        - serviceName: com.amazonaws.iam
-                        - serviceName: com.amazonaws.sts
-                        - serviceName: com.amazonaws.account
-                        - serviceName: com.amazonaws.autoscaling
-                        - serviceName: com.amazonaws.backup
-                        - serviceName: com.amazonaws.dynamodb
-                        - serviceName: com.amazonaws.elasticache
-                        - serviceName: com.amazonaws.elasticfilesystem
-                        - serviceName: com.amazonaws.elasticfilesystem-fips
-                        - serviceName: com.amazonaws.grafana
-                        - serviceName: com.amazonaws.outposts
-                        - serviceName: com.amazonaws.rds
-                        - serviceName: com.amazonaws.rds-data
-                        - serviceName: com.amazonaws.secretsmanager
-                        - serviceName: com.amazonaws.tagging
+                        - serviceName: ec2
+                        - serviceName: ebs
+                        - serviceName: eks
+                        - serviceName: eks-auth
+                        - serviceName: elasticloadbalancing
+                        - serviceName: kms
+                        - serviceName: s3
+                          vpcEndpointType: Gateway
+                        - serviceName: ssm
+                        - serviceName: ssmmessages
+                        - serviceName: sts
+                        - serviceName: autoscaling
+                        - serviceName: backup
+                        - serviceName: dynamodb
+                        - serviceName: elasticache
+                        - serviceName: elasticfilesystem
+                        - serviceName: elasticfilesystem-fips
+                        - serviceName: grafana
+                        - serviceName: outposts
+                        - serviceName: rds
+                        - serviceName: rds-data
+                        - serviceName: secretsmanager
+                        - serviceName: tagging
                   required:
                     - region
                     - cidrBlock
@@ -189,6 +195,30 @@ spec:
         inline:
           template: |
             {{`
+            {{- $endpoints := list }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "ec2") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "ebs") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "eks") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "eks-auth") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "elasticloadbalancing") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "kms") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "s3" "vpcEndpointType" "Gateway") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "ssm") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "ssmmessages") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "sts") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "autoscaling") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "backup") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "dynamodb") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "elasticache") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "elasticfilesystem") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "elasticfilesystem-fips") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "grafana") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "outposts") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "rds") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "rds-data") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "secretsmanager") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "tagging") }}
+
             {{ $id := .observed.composite.resource.metadata.name }}
             {{ $spec := .observed.composite.resource.spec }}
 
@@ -196,7 +226,7 @@ spec:
             kind: VPC
             metadata:
               labels:
-                networks.aws.platform.upbound.io/network-id: {{ $id }}
+                aws.livewyer.io/vpc: {{ $id }}
               annotations:
                 {{ setResourceNameAnnotation ("vpc") }}
             spec:
@@ -206,10 +236,10 @@ spec:
               forProvider:
                 region: {{ $spec.vpc.region }}
                 cidrBlock: {{ $spec.vpc.cidrBlock }}
-                enableDnsHostnames: {{ $spec.vpc.enableDnsHostnames }}
-                enableDnsSupport: {{ $spec.vpc.enableDnsSupport }}
-                assignGeneratedIpv6CidrBlock: {{ $spec.vpc.assignGeneratedIpv6CidrBlock }}
-                enableNetworkAddressUsageMetrics: {{ $spec.vpc.enableNetworkAddressUsageMetrics }}
+                enableDnsHostnames: {{ $spec.vpc.enableDnsHostnames | default true }}
+                enableDnsSupport: {{ $spec.vpc.enableDnsSupport | default true }}
+                assignGeneratedIpv6CidrBlock: {{ $spec.vpc.assignGeneratedIpv6CidrBlock | default false }}
+                enableNetworkAddressUsageMetrics: {{ $spec.vpc.enableNetworkAddressUsageMetrics | default true }}
                 {{- if $spec.vpc.ipv6CidrBlock }}
                 ipv6CidrBlock: {{ $spec.vpc.ipv6CidrBlock }}
                 {{- end }}
@@ -227,7 +257,7 @@ spec:
             kind: VPCIPv4CidrBlockAssociation
             metadata:
               labels:
-                networks.aws.platform.upbound.io/network-id: {{ $id }}
+                aws.livewyer.io/vpc: {{ $id }}
               annotations:
                 {{ setResourceNameAnnotation ("cidr") }}
             spec:
@@ -248,7 +278,7 @@ spec:
             kind: InternetGateway
             metadata:
               labels:
-                networks.aws.platform.upbound.io/network-id: {{ $id }}
+                aws.livewyer.io/vpc: {{ $id }}
               annotations:
                 {{ setResourceNameAnnotation ("igw") }}
             spec:
@@ -271,12 +301,13 @@ spec:
             apiVersion: ec2.aws.upbound.io/v1beta1
             kind: Subnet
             metadata:
+              name: {{ $id }}-{{ $subnet.availabilityZone }}-{{ $subnet.type }}
               labels:
+                aws.livewyer.io/vpc: {{ $id }}
                 availabilityZone: {{ $subnet.availabilityZone }}
-                type: {{ $subnet.type }}
-                networks.aws.platform.upbound.io/network-id: {{ $id }}
+                subnetType: {{ $subnet.type }}
               annotations:
-                {{ setResourceNameAnnotation (printf "subnet-%s-%s-%s" $subnet.availabilityZone (regexReplaceAll "\\.|\\/" $subnet.cidrBlock "-") $subnet.type) }}
+                {{ setResourceNameAnnotation (printf "subnet-%s-%s" $subnet.type $subnet.availabilityZone) }}
             spec:
               deletionPolicy: {{ $spec.deletionPolicy }}
               providerConfigRef:
@@ -291,7 +322,7 @@ spec:
                 vpcIdSelector:
                   matchControllerRef: true
                 tags:
-                  Name: {{ $id }}
+                  Name: {{ $id }}-{{ $subnet.type }}-{{ $subnet.availabilityZone }}
                   {{- if eq $subnet.type "public" }}
                   kubernetes.io/role/elb: "1"
                   {{- else if eq $subnet.type "private" }}
@@ -306,12 +337,41 @@ spec:
             {{- if or (eq $subnet.type "private") (eq $subnet.attachNatGateway true) }}
 
             apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: EIP
+            metadata:
+              name: {{ $id }}-{{ $subnet.availabilityZone }}
+              labels:
+                aws.livewyer.io/vpc: {{ $id }}
+                subnetType: {{ $subnet.type }}
+                availabilityZone: {{ $subnet.availabilityZone }}
+              annotations:
+                {{ setResourceNameAnnotation (printf "eip-%s-%s" $subnet.type $subnet.availabilityZone) }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.vpc.region }}
+                tags:
+                  Name: {{ $id }}
+                  subnetType: {{ $subnet.type }}
+                  availabilityZone: {{ $subnet.availabilityZone }}
+                  {{- if $spec.tags }}
+                  {{ $spec.tags | toYaml | indent 6 }}
+                  {{- end }}
+
+            ---
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
             kind: NATGateway
             metadata:
+              name: {{ $id }}-{{ $subnet.availabilityZone }}
               labels:
-                networks.aws.platform.upbound.io/network-id: {{ $id }}
+                aws.livewyer.io/vpc: {{ $id }}
+                subnetType: {{ $subnet.type }}
+                availabilityZone: {{ $subnet.availabilityZone }}
               annotations:
-                {{ setResourceNameAnnotation ("natgw") }}
+                {{ setResourceNameAnnotation (printf "natgw-%s-%s" $subnet.type $subnet.availabilityZone) }}
             spec:
               deletionPolicy: {{ $spec.deletionPolicy }}
               providerConfigRef:
@@ -320,9 +380,19 @@ spec:
                 region: {{ $spec.vpc.region }}
                 subnetIdSelector:
                   matchControllerRef: true
+                  matchLabels:
+                    subnetType: {{ $subnet.type }}
+                    availabilityZone: {{ $subnet.availabilityZone }}
                 connectivityType: public
+                allocationIdSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    subnetType: {{ $subnet.type }}
+                    availabilityZone: {{ $subnet.availabilityZone }}
                 tags:
-                  Name: {{ $id }}
+                  Name: {{ $id }}-{{ $subnet.availabilityZone }}
+                  subnetType: {{ $subnet.type }}
+                  availabilityZone: {{ $subnet.availabilityZone }}
                   {{- if $spec.tags }}
                   {{ $spec.tags | toYaml | indent 6 }}
                   {{- end }}
@@ -333,11 +403,22 @@ spec:
             apiVersion: ec2.aws.upbound.io/v1beta1
             kind: RouteTable
             metadata:
+              {{- if or (eq $subnet.type "private") (eq $subnet.attachNatGateway true) }}
+              name: {{ $id }}-{{ $subnet.availabilityZone }}-{{ $subnet.type }}
               labels:
-                networks.aws.platform.upbound.io/network-id: {{ $id }}
-                type: {{ $subnet.type }}
+                aws.livewyer.io/vpc: {{ $id }}
+                subnetType: {{ $subnet.type }}
+                availabilityZone: {{ $subnet.availabilityZone }}
               annotations:
-                {{ setResourceNameAnnotation ("rt") }}
+                {{ setResourceNameAnnotation (printf "rt-%s-%s" $subnet.type $subnet.availabilityZone) }}
+              {{- else }}
+              name: {{ $id }}-{{ $subnet.type }}
+              labels:
+                aws.livewyer.io/vpc: {{ $id }}
+                subnetType: {{ $subnet.type }}
+              annotations:
+                {{ setResourceNameAnnotation (printf "rt-%s" $subnet.type) }}
+              {{- end }}
             spec:
               deletionPolicy: {{ $spec.deletionPolicy }}
               providerConfigRef:
@@ -347,161 +428,283 @@ spec:
                   matchControllerRef: true
                 region: {{ $spec.vpc.region }}
                 tags:
-                  Name: {{ $id }}
+                  Name: {{ $id }}-{{ $subnet.type }}
+                  subnetType: {{ $subnet.type }}
+                  {{- if or (eq $subnet.type "private") (eq $subnet.attachNatGateway true) }}
+                  availabilityZone: {{ $subnet.availabilityZone }}
+                  {{- end }}
                   {{- if $spec.tags }}
                   {{ $spec.tags | toYaml | indent 6 }}
                   {{- end }}
 
             ---
+            {{- if or (eq $subnet.type "private") (eq $subnet.attachNatGateway true) }}
 
             apiVersion: ec2.aws.upbound.io/v1beta1
             kind: Route
             metadata:
+              name: {{ $id }}-{{ $subnet.type }}-{{ $subnet.availabilityZone }}
               labels:
-                networks.aws.platform.upbound.io/network-id: {{ $id }}
+                aws.livewyer.io/vpc: {{ $id }}
+                subnetType: {{ $subnet.type }}
+                availabilityZone: {{ $subnet.availabilityZone }}
               annotations:
-                {{ setResourceNameAnnotation ("route") }}
+                {{ setResourceNameAnnotation (printf "route-%s-%s" $subnet.type $subnet.availabilityZone) }}
             spec:
               deletionPolicy: {{ $spec.deletionPolicy }}
               providerConfigRef:
                 name: {{ $spec.providerConfigRef.name }}
               forProvider:
-                {{- if eq $subnet.type "public" }}
-                destinationCidrBlock: 0.0.0.0/0
-                gatewayIdSelector:
-                  matchControllerRef: true
-                {{- else if or (eq $subnet.type "private") (eq $subnet.attachNatGateway true) }}
+                region: {{ $spec.vpc.region }}
                 destinationCidrBlock: 0.0.0.0/0
                 natGatewayIdSelector:
                   matchControllerRef: true
-                {{- end }}
+                  matchLabels:
+                    subnetType: {{ $subnet.type }}
+                    availabilityZone: {{ $subnet.availabilityZone }}
                 routeTableIdSelector:
                   matchControllerRef: true
-                region: {{ $spec.vpc.region }}
+                  matchLabels:
+                    subnetType: {{ $subnet.type }}
+                    availabilityZone: {{ $subnet.availabilityZone }}
 
             ---
+            {{- else if eq $subnet.type "public" }}
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: Route
+            metadata:
+              name: {{ $id }}-{{ $subnet.type }}
+              labels:
+                aws.livewyer.io/vpc: {{ $id }}
+                subnetType: {{ $subnet.type }}
+              annotations:
+                {{ setResourceNameAnnotation (printf "route-%s" $subnet.type) }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.vpc.region }}
+                destinationCidrBlock: 0.0.0.0/0
+                gatewayIdSelector:
+                  matchControllerRef: true
+                routeTableIdSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    subnetType: {{ $subnet.type }}
+
+            ---
+            {{- end }}
 
             apiVersion: ec2.aws.upbound.io/v1beta1
             kind: RouteTableAssociation
             metadata:
+              name: {{ $id }}-{{ $subnet.type }}-{{ $subnet.availabilityZone }}
               labels:
-                networks.aws.platform.upbound.io/network-id: {{ $id }}
+                aws.livewyer.io/vpc: {{ $id }}
               annotations:
-                {{ setResourceNameAnnotation (printf "rta-%s-%s-%s" $subnet.availabilityZone (regexReplaceAll "\\.|\\/" $subnet.cidrBlock "-") $subnet.type) }}
+                {{ setResourceNameAnnotation (printf "rta-%s-%s" $subnet.type $subnet.availabilityZone) }}
             spec:
               deletionPolicy: {{ $spec.deletionPolicy }}
               providerConfigRef:
                 name: {{ $spec.providerConfigRef.name }}
               forProvider:
                 region: {{ $spec.vpc.region }}
+                {{- if or (eq $subnet.type "private") (eq $subnet.attachNatGateway true) }}
                 routeTableIdSelector:
                   matchControllerRef: true
+                  matchLabels:
+                    subnetType: {{ $subnet.type }}
+                    availabilityZone: {{ $subnet.availabilityZone }}
+                {{- else }}
+                routeTableIdSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    subnetType: {{ $subnet.type }}
+                {{- end }}
                 subnetIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    type: {{ $subnet.type }}
+                    subnetType: {{ $subnet.type }}
                     availabilityZone: {{ $subnet.availabilityZone }}
 
             ---
             {{- end }}
-            {{- range $i, $endpoint := $spec.endpoints }}
+            {{- range $i, $endpoint := default $endpoints $spec.endpoints }}
 
             apiVersion: ec2.aws.upbound.io/v1beta1
             kind: VPCEndpoint
             metadata:
+              name: {{ $id }}-{{ $endpoint.serviceName }}
               labels:
-                networks.aws.platform.upbound.io/network-id: {{ $id }}
-                VPCEndpoint:  {{ $endpoint.serviceName }}
+                aws.livewyer.io/vpc: {{ $id }}
+                vpcEndpoint: {{ $endpoint.serviceName }}
               annotations:
-                {{ setResourceNameAnnotation ("vpce") }}
+                {{ setResourceNameAnnotation (printf "vpce-%s" $endpoint.serviceName) }}
             spec:
               deletionPolicy: {{ $spec.deletionPolicy }}
               providerConfigRef:
                 name: {{ $spec.providerConfigRef.name }}
               forProvider:
                 region: {{ $spec.vpc.region }}
-                serviceName: {{ $endpoint.serviceName }}
-                vpcEndpointType: {{ $endpoint.vpcEndpointType }}
+                serviceName: {{ printf "%s.%s.%s" (default "com.amazonaws" $endpoint.serviceNamePrefix) $spec.vpc.region $endpoint.serviceName }}
+                vpcEndpointType: {{ $endpoint.vpcEndpointType | default "Interface" }}
                 vpcIdSelector:
                   matchControllerRef: true
                 tags:
-                  Name: {{ $id }}
+                  Name: {{ $id }}-{{ $endpoint.serviceName }}
                   {{- if $spec.tags }}
                   {{ $spec.tags | toYaml | indent 6 }}
                   {{- end }}
 
             ---
+            {{- range $i, $subnet := $spec.vpc.subnets }}
+            {{- if or (eq $subnet.type "private") (eq $subnet.attachNatGateway true) }}
+            {{- if eq $endpoint.vpcEndpointType "Gateway" }}
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: VPCEndpointRouteTableAssociation
+            metadata:
+              name: {{ $id }}-{{ $endpoint.serviceName }}-{{ $subnet.availabilityZone }}
+              labels:
+                aws.livewyer.io/vpc: {{ $id }}
+                vpcEndpoint: {{ $endpoint.serviceName }}
+              annotations:
+                {{ setResourceNameAnnotation (printf "vpce-gw-%s-%s" $endpoint.serviceName $subnet.availabilityZone) }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.vpc.region }}
+                vpcEndpointIdSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    vpcEndpoint: {{ $endpoint.serviceName }}
+                routeTableIdSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    subnetType: {{ $subnet.type }}
+                    availabilityZone: {{ $subnet.availabilityZone }}
+
+            ---
+            {{- else }}
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: VPCEndpointSubnetAssociation
+            metadata:
+              name: {{ $id }}-{{ $endpoint.serviceName }}-{{ $subnet.availabilityZone }}
+              labels:
+                aws.livewyer.io/vpc: {{ $id }}
+                vpcEndpoint: {{ $endpoint.serviceName }}
+              annotations:
+                {{ setResourceNameAnnotation (printf "vpce-eni-%s-%s" $endpoint.serviceName $subnet.availabilityZone) }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.vpc.region }}
+                vpcEndpointIdSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    vpcEndpoint: {{ $endpoint.serviceName }}
+                subnetIdSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    subnetType: {{ $subnet.type }}
+                    availabilityZone: {{ $subnet.availabilityZone }}
+
+            ---
+            {{- end }}
+            {{- end }}
+            {{- end }}
             {{- end }}
 
             apiVersion: {{ .observed.composite.resource.apiVersion }}
             kind: {{ .observed.composite.resource.kind }}
             status:
-            {{- $vpcId := dig "resources" "vpc" "resource" "status" "atProvider" "id" "" $.observed }}
-            {{- if $vpcId }}
-            vpcId: {{ $vpcId }}
-            {{- end }}
-
-            {{- $subnetIds := list }}
-            {{- range $i, $subnet := $spec.subnets }}
-            {{- $subnetId := dig "resources" (printf "subnet-%s-%s" $subnet.availabilityZone $subnet.type) "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed }}
-            {{- if $subnetId }}
-            {{- $subnetIds = append $subnetIds $subnetId }}
-            {{- end }}
-            {{- end }}
-            {{- if $subnetIds }}
-            subnetIds:
-              {{- range $id := $subnetIds }}
-              - {{ $id }}
+              {{- $vpcId := dig "resources" "vpc" "resource" "status" "atProvider" "id" "" $.observed }}
+              {{- if $vpcId }}
+              vpcId: {{ $vpcId }}
               {{- end }}
-            {{- end }}
 
-            {{- $publicSubnetIds := list }}
-            {{- range $i, $subnet := $spec.subnets }}
-            {{- if eq $subnet.type "public" }}
-            {{- $publicSubnetId := dig "resources" (printf "subnet-%s-%s" $subnet.availabilityZone $subnet.type) "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed }}
-            {{- if $publicSubnetId }}
-            {{- $publicSubnetIds = append $publicSubnetIds $publicSubnetId }}
-            {{- end }}
-            {{- end }}
-            {{- end }}
-            {{- if $publicSubnetIds }}
-            publicSubnetIds:
-              {{- range $id := $publicSubnetIds }}
-              - {{ $id }}
+              {{- $subnetIds := list }}
+              {{- range $i, $subnet := $spec.subnets }}
+              {{- $subnetId := dig "resources" (printf "subnet-%s-%s" $subnet.type $subnet.availabilityZone) "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed }}
+              {{- if $subnetId }}
+              {{- $subnetIds = append $subnetIds $subnetId }}
               {{- end }}
-            {{- end }}
+              {{- end }}
+              {{- if $subnetIds }}
+              subnetIds:
+                {{- range $id := $subnetIds }}
+                - {{ $id }}
+                {{- end }}
+              {{- end }}
 
-            {{- $privateSubnetIds := list }}
-            {{- range $i, $subnet := $spec.subnets }}
-            {{- if eq $subnet.type "private" }}
-            {{- $privateSubnetId := dig "resources" (printf "subnet-%s-%s" $subnet.availabilityZone $subnet.type) "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed }}
-            {{- if $privateSubnetId }}
-            {{- $privateSubnetIds = append $privateSubnetIds $privateSubnetId }}
-            {{- end }}
-            {{- end }}
-            {{- end }}
-            {{- if $privateSubnetIds }}
-            privateSubnetIds:
-              {{- range $id := $privateSubnetIds }}
-              - {{ $id }}
+              {{- $publicSubnetIds := list }}
+              {{- range $i, $subnet := $spec.subnets }}
+              {{- if eq $subnet.type "public" }}
+              {{- $publicSubnetId := dig "resources" (printf "subnet-%s-%s" $subnet.type $subnet.availabilityZone) "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed }}
+              {{- if $publicSubnetId }}
+              {{- $publicSubnetIds = append $publicSubnetIds $publicSubnetId }}
               {{- end }}
-            {{- end }}
+              {{- end }}
+              {{- end }}
+              {{- if $publicSubnetIds }}
+              publicSubnetIds:
+                {{- range $id := $publicSubnetIds }}
+                - {{ $id }}
+                {{- end }}
+              {{- end }}
 
-            {{- $intraSubnetIds := list }}
-            {{- range $i, $subnet := $spec.subnets }}
-            {{- if eq $subnet.type "intra" }}
-            {{- $intraSubnetId := dig "resources" (printf "subnet-%s-%s" $subnet.availabilityZone $subnet.type) "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed }}
-            {{- if $intraSubnetId }}
-            {{- $intraSubnetIds = append $intraSubnetIds $intraSubnetId }}
-            {{- end }}
-            {{- end }}
-            {{- end }}
-            {{- if $intraSubnetIds }}
-            intraSubnetIds:
-              {{- range $id := $intraSubnetIds }}
-              - {{ $id }}
+              {{- $privateSubnetIds := list }}
+              {{- range $i, $subnet := $spec.subnets }}
+              {{- if eq $subnet.type "private" }}
+              {{- $privateSubnetId := dig "resources" (printf "subnet-%s-%s" $subnet.availabilityZone $subnet.type) "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed }}
+              {{- if $privateSubnetId }}
+              {{- $privateSubnetIds = append $privateSubnetIds $privateSubnetId }}
               {{- end }}
-            {{- end }}
+              {{- end }}
+              {{- end }}
+              {{- if $privateSubnetIds }}
+              privateSubnetIds:
+                {{- range $id := $privateSubnetIds }}
+                - {{ $id }}
+                {{- end }}
+              {{- end }}
+
+              {{- $intraSubnetIds := list }}
+              {{- range $i, $subnet := $spec.subnets }}
+              {{- if eq $subnet.type "intra" }}
+              {{- $intraSubnetId := dig "resources" (printf "subnet-%s-%s" $subnet.type $subnet.availabilityZone) "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed }}
+              {{- if $intraSubnetId }}
+              {{- $intraSubnetIds = append $intraSubnetIds $intraSubnetId }}
+              {{- end }}
+              {{- end }}
+              {{- end }}
+              {{- if $intraSubnetIds }}
+              intraSubnetIds:
+                {{- range $id := $intraSubnetIds }}
+                - {{ $id }}
+                {{- end }}
+              {{- end }}
+
+              {{- $endpointIds := list }}
+              {{- range $i, $endpoint := $spec.endpoints }}
+              {{ $endpointId := dig "resources" (printf "endpoint-%s-%s" $endpoint.serviceName $endpoint.vpcEndpointType) "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed }}
+              {{- if $endpointId }}
+              {{- $endpointIds = append $endpointIds $endpointId }}
+              {{- end }}
+              {{- end }}
+              {{- if $endpointIds }}
+              endpoints:
+                {{- range $id := $endpointIds }}
+                - {{ $id }}
+                {{- end }}
+              {{- end }}
 
             `}}
     - step: automatically-detect-readiness
