@@ -25,12 +25,14 @@ spec:
               properties:
                 deletionPolicy:
                   type: string
+                  description: Delete the external resources when the Claim/XR is deleted. Defaults to Delete.
                   enum:
                     - Delete
                     - Orphan
                   default: Delete
                 managementPolicies:
                   type: array
+                  description: THIS IS A BETA FIELD. ManagementPolicies specify the array of actions Crossplane is allowed to take on the managed and external resources. This field is planned to replace the DeletionPolicy field in a future release.
                   items:
                     type: string
                     enum:
@@ -41,52 +43,70 @@ spec:
                   default: ["Create", "Update", "Observe", "Delete"]
                 providerConfigRef:
                   type: object
+                  description: ProviderConfigReference specifies how the provider that will be used to create, observe, update, and delete this managed resource should be configured.
                   properties:
                     name:
                       type: string
+                      description: Name of the referenced object.
                 vpc:
                   type: object
+                  description: VPC configurations.
                   properties:
                     region:
                       type: string
+                      description: Region where resource will be created.
                     assignGeneratedIpv6CidrBlock:
                       type: boolean
+                      description: Whether to assign a generated IPv6 CIDR block to the VPC.
                       default: false
                     cidrBlock:
                       type: string
+                      description: CIDR block for the VPC.
                       default: 10.0.0.0/16
                     additionalCidrBlocks:
                       type: array
+                      description: Additional CIDR blocks for the VPC.
                       items:
                         type: string
                     enableDnsHostnames:
                       type: boolean
+                      description: Whether to enable DNS hostnames for the VPC.
                       default: true
                     enableDnsSupport:
                       type: boolean
+                      description: Whether to enable DNS support for the VPC.
                       default: true
                     enableNetworkAddressUsageMetrics:
                       type: boolean
+                      description: Whether to enable network address usage metrics for the VPC.
                       default: true
                     instanceTenancy:
                       type: string
+                      description: The tenancy of the instances launched in the VPC.
                       default: default
                     ipv6CidrBlock:
                       type: string
+                      description: The IPv6 CIDR block for the VPC.
                     subnets:
                       type: array
+                      description: The subnets for the VPC.
                       items:
                         type: object
+                        description: The subnet for the VPC.
                         properties:
                           availabilityZone:
                             type: string
+                            description: The availability zone for the subnet.
                           cidrBlock:
                             type: string
+                            description: The CIDR block for the subnet.
                           mapPublicIpOnLaunch:
                             type: boolean
                             default: false
+                            description: Whether to map public IP addresses on instances launched in the subnet.
                           type:
                             type: string
+                            description: The subnet type.
                             default: public
                             enum:
                               - public
@@ -94,23 +114,29 @@ spec:
                               - intra
                           attachNatGateway:
                             type: boolean
+                            description: Whether to attach a NAT gateway to the subnet.
                             default: false
                         required:
                           - availabilityZone
                           - cidrBlock
                     endpoints:
                       type: array
+                      description: List of VPC endpoints for AWS services to create.
                       items:
                         type: object
+                        description: VPC endpoint configuration.
                         properties:
                           serviceName:
                             type: string
+                            description: The AWS service name.
                           vpcEndpointType:
                             type: string
+                            description: The VPC Endpoint type.
                             default: "Interface"
                             enum: ["Interface", "Gateway"]
                           serviceNamePrefix:
                             type: string
+                            description: The prefix of the service name. For AWS services the service name is usually in the form com.amazonaws.<region>.<service> (the SageMaker Notebook service is an exception to this rule, the service name is in the form aws.sagemaker.<region>.notebook)
                             default: "com.amazonaws"
                         required:
                           - serviceName
@@ -144,11 +170,14 @@ spec:
                     - subnets
                 tags:
                   type: object
+                  description: Tags to apply to the VPC and its resources.
                   properties:
                     name:
                       type: string
+                      description: The tag name.
                     value:
                       type: string
+                      description: The tag value.
               required:
                 - vpc
             status:
@@ -169,6 +198,10 @@ spec:
                   items:
                     type: string
                 intraSubnetIds:
+                  type: array
+                  items:
+                    type: string
+                endpoints:
                   type: array
                   items:
                     type: string
