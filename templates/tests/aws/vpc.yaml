@@ -3,7 +3,7 @@
 apiVersion: aws.livewyer.io/v1alpha1
 kind: XVPC
 metadata:
-  name: aws-vpc-test
+  name: vpc-test-1
 spec:
   providerConfigRef:
     name: aws
@@ -37,6 +37,47 @@ spec:
         type: intra
       - availabilityZone: eu-west-1c
         cidrBlock: 10.100.8.0/24
+        type: intra
+
+---
+
+apiVersion: aws.livewyer.io/v1alpha1
+kind: XVPC
+metadata:
+  name: vpc-test-2
+spec:
+  providerConfigRef:
+    name: aws
+  vpc:
+    cidrBlock: 10.200.0.0/16
+    region: eu-west-1
+    subnets:
+      - availabilityZone: eu-west-1a
+        cidrBlock: 10.200.0.0/24
+        type: public
+      - availabilityZone: eu-west-1b
+        cidrBlock: 10.200.1.0/24
+        type: public
+      - availabilityZone: eu-west-1c
+        cidrBlock: 10.200.2.0/24
+        type: public
+      - availabilityZone: eu-west-1a
+        cidrBlock: 10.200.3.0/24
+        type: private
+      - availabilityZone: eu-west-1b
+        cidrBlock: 10.200.4.0/24
+        type: private
+      - availabilityZone: eu-west-1c
+        cidrBlock: 10.200.5.0/24
+        type: private
+      - availabilityZone: eu-west-1a
+        cidrBlock: 10.200.6.0/24
+        type: intra
+      - availabilityZone: eu-west-1b
+        cidrBlock: 10.200.7.0/24
+        type: intra
+      - availabilityZone: eu-west-1c
+        cidrBlock: 10.200.8.0/24
         type: intra
 
 {{- end }}
