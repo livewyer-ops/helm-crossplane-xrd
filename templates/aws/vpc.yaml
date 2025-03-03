@@ -228,30 +228,6 @@ spec:
         inline:
           template: |
             {{`
-            {{- $endpoints := list }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "ec2") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "ebs") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "eks") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "eks-auth") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "elasticloadbalancing") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "kms") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "s3" "vpcEndpointType" "Gateway") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "ssm") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "ssmmessages") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "sts") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "autoscaling") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "backup") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "dynamodb") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "elasticache") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "elasticfilesystem") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "elasticfilesystem-fips") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "grafana") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "outposts") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "rds") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "rds-data") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "secretsmanager") }}
-            {{- $endpoints = append $endpoints (dict "serviceName" "tagging") }}
-
             {{ $id := .observed.composite.resource.metadata.name }}
             {{ $spec := .observed.composite.resource.spec }}
 
@@ -582,6 +558,31 @@ spec:
 
             ---
             {{- end }}
+
+            {{- $endpoints := list }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "ec2") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "ebs") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "eks") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "eks-auth") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "elasticloadbalancing") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "kms") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "s3" "vpcEndpointType" "Gateway") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "ssm") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "ssmmessages") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "sts") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "autoscaling") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "backup") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "dynamodb") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "elasticache") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "elasticfilesystem") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "elasticfilesystem-fips") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "grafana") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "outposts") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "rds") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "rds-data") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "secretsmanager") }}
+            {{- $endpoints = append $endpoints (dict "serviceName" "tagging") }}
+
             {{- range $i, $endpoint := default $endpoints $spec.endpoints }}
 
             apiVersion: ec2.aws.upbound.io/v1beta1

@@ -1,0 +1,729 @@
+{{- if .Values.providers.aws.enabled }}
+
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: cluster.eks.aws.livewyer.io
+spec:
+  group: eks.aws.livewyer.io
+  names:
+    kind: XCLUSTER
+    plural: xclusters
+  claimNames:
+      kind: CLUSTER
+      plural: clusters
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                deletionPolicy:
+                  type: string
+                  description: Delete the external resources when the Claim/XR is deleted. Defaults to Delete.
+                  enum:
+                    - Delete
+                    - Orphan
+                  default: Delete
+                managementPolicies:
+                  type: array
+                  description: THIS IS A BETA FIELD. ManagementPolicies specify the array of actions Crossplane is allowed to take on the managed and external resources. This field is planned to replace the DeletionPolicy field in a future release.
+                  items:
+                    type: string
+                    enum:
+                      - Create
+                      - Update
+                      - Observe
+                      - Delete
+                  default: ["Create", "Update", "Observe", "Delete"]
+                providerConfigRef:
+                  type: object
+                  description: ProviderConfigReference specifies how the provider that will be used to create, observe, update, and delete this managed resource should be configured.
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the referenced object.
+                clusters:
+                  type: object
+                  description: Cluster configurations.
+                  properties:
+                    accessConfig:
+                      type: object
+                      description: Configuration block for the access config associated with your cluster, see Amazon EKS Access Entries.
+                      properties:
+                        authenticationMode:
+                          type: string
+                          description: Authentication mode for the cluster.
+                          enum:
+                            - CONFIG_MAP
+                            - API
+                            - API_AND_CONFIG_MAP
+                          default: API_AND_CONFIG_MAP
+                        bootstrapClusterCreatorAdminPermissions:
+                          type: boolean
+                          description: Whether or not to bootstrap the access config values to the cluster. Default is true.
+                          default: true
+                    bootstrapSelfManagedAddons:
+                      type: boolean
+                      description: Whether or not to bootstrap the self-managed add-ons to the cluster. Default is true.
+                      default: true
+                    computeConfig:
+                      type: list
+                      description: Compute configurations for the cluster.
+                      items:
+                        type: string
+                        description: Compute configuration for the cluster.
+                        enum:
+                          - system
+                          - general-purpose
+                      default:
+                        - system
+                        - general-purpose
+                    enabledClusterLogTypes:
+                      type: list
+                      description: Enabled cluster log types.
+                      items:
+                        type: string
+                        description: Enabled cluster log type.
+                        enum:
+                          - api
+                          - audit
+                          - authenticator
+                          - controllerManager
+                          - scheduler
+                      default:
+                        - api
+                        - audit
+                        - authenticator
+                        - controllerManager
+                        - scheduler
+                    kubernetesNetworkConfig:
+                      type: object
+                      description: Configuration block with kubernetes network configuration for the cluster.
+                      properties:
+                        elasticLoadBalancing:
+                          type: object
+                          description: Configuration block with elastic load balancing configuration for the cluster.
+                          properties:
+                            enabled:
+                              type: boolean
+                              description: Whether zonal shift is enabled for the cluster.
+                              default: true
+                        ipFamily:
+                          type: string
+                          description: IP family for the cluster.
+                          enum:
+                            - ipv4
+                            - ipv6
+                          default: ipv4
+                        serviceIpv4Cidr:
+                          type: string
+                          description: The CIDR block to assign Kubernetes pod and service IP addresses from. If you don't specify a block, Kubernetes assigns addresses from either the 10.100.0.0/16 or 172.20.0.0/16 CIDR blocks.
+                    remoteNetworkConfig:
+                      type: arrary
+                      description: Configuration block with remote network configuration for EKS Hybrid Nodes.
+                      items:
+                        remoteNodeNetworks:
+                          type: array
+                          description: Configuration block with remote node network configuration for EKS Hybrid Nodes.
+                          items:
+                            type: object
+                            properties:
+                              cidrs:
+                                type: array
+                                description: List of network CIDRs that can contain hybrid nodes.
+                                items:
+                                  type: string
+                                  description: List of network CIDRs that can contain hybrid nodes.
+                        remotePodNetworks:
+                          type: array
+                          description: Configuration block with remote pod network configuration for EKS Hybrid Nodes.
+                          items:
+                            type: object
+                            properties:
+                              cidrs:
+                                type: array
+                                description: List of network CIDRs that can contain pods that run Kubernetes webhooks on hybrid nodes.
+                                items:
+                                  type: string
+                                  description: List of network CIDRs that can contain pods that run Kubernetes webhooks on hybrid nodes.
+                    storageConfig:
+                      type: object
+                      description: Configuration block with storage configuration for EKS Auto Mode.
+                      properties:
+                        blockStorage:
+                          type: object
+                          descirption: Configuration block with storage configuration for EKS Auto Mode.
+                          properties:
+                            enabled:
+                              type: boolean
+                              description: Whether zonal shift is enabled for the cluster.
+                              default: true
+                    upgradePolicy:
+                      type: object
+                      description: Configuration block for the support policy to use for the cluster.
+                      properties:
+                        supportType:
+                          type: string
+                          description: Support type to use for the cluster. If the cluster is set to EXTENDED, it will enter extended support at the end of standard support. If the cluster is set to STANDARD, it will be automatically upgraded at the end of standard support. Valid values are EXTENDED, STANDARD.
+                          enum:
+                            - EXTENDED
+                            - STANDARD
+                          default: STANDARD
+                vpc:
+                  type: object
+                  description: VPC configurations.
+                  properties:
+                    region:
+                      type: string
+                      description: Region where resource will be created.
+                    assignGeneratedIpv6CidrBlock:
+                      type: boolean
+                      description: Whether to assign a generated IPv6 CIDR block to the VPC.
+                      default: false
+                    cidrBlock:
+                      type: string
+                      description: CIDR block for the VPC.
+                      default: 10.0.0.0/16
+                    additionalCidrBlocks:
+                      type: array
+                      description: Additional CIDR blocks for the VPC.
+                      items:
+                        type: string
+                    enableDnsHostnames:
+                      type: boolean
+                      description: Whether to enable DNS hostnames for the VPC.
+                      default: true
+                    enableDnsSupport:
+                      type: boolean
+                      description: Whether to enable DNS support for the VPC.
+                      default: true
+                    enableNetworkAddressUsageMetrics:
+                      type: boolean
+                      description: Whether to enable network address usage metrics for the VPC.
+                      default: true
+                    instanceTenancy:
+                      type: string
+                      description: The tenancy of the instances launched in the VPC.
+                      default: default
+                    ipv6CidrBlock:
+                      type: string
+                      description: The IPv6 CIDR block for the VPC.
+                    subnets:
+                      type: array
+                      description: The subnets for the VPC.
+                      items:
+                        type: object
+                        description: The subnet for the VPC.
+                        properties:
+                          availabilityZone:
+                            type: string
+                            description: The availability zone for the subnet.
+                          cidrBlock:
+                            type: string
+                            description: The CIDR block for the subnet.
+                          mapPublicIpOnLaunch:
+                            type: boolean
+                            default: false
+                            description: Whether to map public IP addresses on instances launched in the subnet.
+                          type:
+                            type: string
+                            description: The subnet type.
+                            default: public
+                            enum:
+                              - public
+                              - private
+                              - intra
+                          attachNatGateway:
+                            type: boolean
+                            description: Whether to attach a NAT gateway to the subnet.
+                            default: false
+                        required:
+                          - availabilityZone
+                          - cidrBlock
+                    endpoints:
+                      type: array
+                      description: List of VPC endpoints for AWS services to create.
+                      items:
+                        type: object
+                        description: VPC endpoint configuration.
+                        properties:
+                          serviceName:
+                            type: string
+                            description: The AWS service name.
+                          vpcEndpointType:
+                            type: string
+                            description: The VPC Endpoint type.
+                            default: "Interface"
+                            enum: ["Interface", "Gateway"]
+                          serviceNamePrefix:
+                            type: string
+                            description: The prefix of the service name. For AWS services the service name is usually in the form com.amazonaws.<region>.<service> (the SageMaker Notebook service is an exception to this rule, the service name is in the form aws.sagemaker.<region>.notebook)
+                            default: "com.amazonaws"
+                        required:
+                          - serviceName
+                      default:
+                        - serviceName: ec2
+                        - serviceName: ebs
+                        - serviceName: eks
+                        - serviceName: eks-auth
+                        - serviceName: elasticloadbalancing
+                        - serviceName: kms
+                        - serviceName: s3
+                          vpcEndpointType: Gateway
+                        - serviceName: ssm
+                        - serviceName: ssmmessages
+                        - serviceName: sts
+                        - serviceName: autoscaling
+                        - serviceName: backup
+                        - serviceName: dynamodb
+                        - serviceName: elasticache
+                        - serviceName: elasticfilesystem
+                        - serviceName: elasticfilesystem-fips
+                        - serviceName: grafana
+                        - serviceName: outposts
+                        - serviceName: rds
+                        - serviceName: rds-data
+                        - serviceName: secretsmanager
+                        - serviceName: tagging
+                  required:
+                    - region
+                    - cidrBlock
+                    - subnets
+                tags:
+                  type: object
+                  description: Tags to apply to the VPC and its resources.
+                  properties:
+                    name:
+                      type: string
+                      description: The tag name.
+                    value:
+                      type: string
+                      description: The tag value.
+              required:
+                - vpc
+                - cluster
+            status:
+              type: object
+              properties:
+                cluster:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    endpoint:
+                      type: string
+                    addons:
+                      type: array
+                      items:
+                        name:
+                          type: string
+                        version:
+                          type: string
+                    vpc:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        cidrBlock:
+                          type: string
+
+---
+
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: cluster.eks.aws.livewyer.io
+spec:
+  compositeTypeRef:
+    apiVersion: eks.aws.livewyer.io/v1alpha1
+    kind: XCLUSTER
+  mode: Pipeline
+  pipeline:
+    - step: go-templating
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{`
+            {{ $id := .observed.composite.resource.metadata.name }}
+            {{ $spec := .observed.composite.resource.spec }}
+
+            apiVersion: ec2.aws.livewyer.io/v1alpha1
+            kind: XVPC
+            metadata:
+              labels:
+                eks.aws.livewyer.io/cluster: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("vpc") }}
+            spec:
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              vpc:
+                region: {{ $spec.cluster.region }}
+                {{ $spec.cluster.vpc | toYaml | indent 4 }}
+                tags:
+                  {{ $spec.tags | toYaml | indent 6 }}
+
+            ---
+
+            apiVersion: iam.aws.upbound.io/v1beta1
+            kind: Role
+            metadata:
+              labels:
+                eks.aws.livewyer.io/cluster: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("eks_role") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                assumeRolePolicy: |
+                  {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Principal": {
+                          "Service": "eks.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole"
+                      }
+                    ]
+                  }
+                inlinePolicy:
+                  - name: eks-{{ $id }}-kms
+                    policy: |
+                      {
+                        Version = "2012-10-17"
+                        Statement = [
+                          {
+                            Action = [
+                              "kms:Encrypt",
+                              "kms:Decrypt",
+                              "kms:ListGrants",
+                              "kms:DescribeKey"
+                            ]
+                            Effect   = "Allow"
+                            Resource = {{ dig "resources" "eks_kms" "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed}}
+                          }
+                        ]
+                      }
+                managedPolicyArns:
+                  - arn:aws:iam::aws:policy/AmazonEKSServiceRolePolicy
+                  - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+                  - arn:aws:iam::aws:policy/AmazonEKSComputePolicy
+                  - arn:aws:iam::aws:policy/AmazonEKSBlockStoragePolicy
+                  - arn:aws:iam::aws:policy/AmazonEKSLoadBalancingPolicy
+                  - arn:aws:iam::aws:policy/AmazonEKSNetworkingPolicy
+                  - arn:aws:iam::aws:policy/AmazonEKSVPCResourceController
+                tags:
+                  {{ $spec.tags | toYaml | indent 6 }}
+
+            ---
+
+            apiVersion: iam.aws.upbound.io/v1beta1
+            kind: Role
+            metadata:
+              labels:
+                eks.aws.livewyer.io/cluster: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("eks_node_role") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                assumeRolePolicy: |
+                  {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Principal": {
+                          "Service": "eks.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole"
+                      }
+                    ]
+                  }
+                managedPolicyArns:
+                  - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+                  - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPullOnly
+                tags:
+                  {{ $spec.tags | toYaml | indent 6 }}
+
+            ---
+
+            apiVersion: kms.aws.upbound.io/v1beta1
+            kind: Key
+            metadata:
+              labels:
+                eks.aws.livewyer.io/cluster: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("eks_kms") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.cluster.region }}
+                tags:
+                  {{ $spec.tags | toYaml | indent 6 }}
+
+            ---
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: SecurityGroup
+            metadata:
+              labels:
+                eks.aws.livewyer.io/cluster: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("eks_sg") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.cluster.region }}
+                vpcIdSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                      eks.aws.livewyer.io/cluster: {{ $id }}
+                      ec2.aws.livewyer.io/vpc: {{ $id }}
+                tags:
+                  {{ $spec.tags | toYaml | indent 6 }}
+
+            ---
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: SecurityGroupEgressRule
+            metadata:
+               labels:
+                eks.aws.livewyer.io/cluster: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("eks_sg_egress") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.cluster.region }}
+                cidrIpv4: 0.0.0.0/0
+                cidrIpv6: ::/0
+                ipProtocol: -1
+                securityGroupIdSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                      eks.aws.livewyer.io/cluster: {{ $id }}
+                      ec2.aws.livewyer.io/vpc: {{ $id }}
+                tags:
+                  {{ $spec.tags | toYaml | indent 6 }}
+
+            ---
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: SecurityGroupIngressRule
+            metadata:
+               labels:
+                eks.aws.livewyer.io/cluster: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("eks_sg_ingress") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.cluster.region }}
+                cidrIpv4: 0.0.0.0/0
+                cidrIpv6: ::/0
+                toPort: 443
+                ipProtocol: -1
+                securityGroupIdSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                      eks.aws.livewyer.io/cluster: {{ $id }}
+                      ec2.aws.livewyer.io/vpc: {{ $id }}
+                tags:
+                  {{ $spec.tags | toYaml | indent 6 }}
+
+            ---
+
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: SecurityGroupIngressRule
+            metadata:
+               labels:
+                eks.aws.livewyer.io/cluster: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("eks_sg_self") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.cluster.region }}
+                ipProtocol: -1
+                referencedSecurityGroupIdSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                      eks.aws.livewyer.io/cluster: {{ $id }}
+                      ec2.aws.livewyer.io/vpc: {{ $id }}
+                securityGroupIdSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                      eks.aws.livewyer.io/cluster: {{ $id }}
+                      ec2.aws.livewyer.io/vpc: {{ $id }}
+                tags:
+                  {{ $spec.tags | toYaml | indent 6 }}
+
+            ---
+
+            apiVersion: eks.aws.upbound.io/v1beta1
+            kind: Cluster
+            metadata:
+              labels:
+                eks.aws.livewyer.io/cluster: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("eks") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ $spec.providerConfigRef.name }}
+              forProvider:
+                region: {{ $spec.cluster.region }}
+                accessConfig:
+                  - authenticationMode: {{ $spec.cluster.accessConfig.authenticationMode | default "API_AND_CONFIG_MAP" }}
+                    bootstrapClusterCreatorAdminPermissions: {{ $spec.cluster.accessConfig.bootstrapClusterCreatorAdminPermissions | default true }}
+                bootstrapSelfManagedAddons: {{ $spec.cluster.bootstrapSelfManagedAddons | default true }}
+                computeConfig:
+                  - enabled: true
+                    nodePools: {{ $spec.cluster.computeConfig.nodePools | toJson | default ["system","general-purpose"] }}
+                    nodeRoleArn: {{ dig "resources" "eks_node_role" "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed}}
+                enabledClusterLogTypes: {{ $spec.cluster.enabledClusterLogTypes | default ["api","audit","authenticator","controllerManager","scheduler"] }}
+                encryptionConfig:
+                  - provider:
+                      - keyArn: {{ dig "resources" "eks_kms" "resource" "metadata" "annotations" "crossplane.io/external-name" "" $.observed}}
+                    resources:
+                      - secrets
+                kubernetesNetworkConfig:
+                  - elasticLoadBalancing:
+                      enabled: {{ $spec.cluster.kubernetesNetworkConfig.elasticLoadBalancing.enabled | default true }}
+                {{- if $spec.cluster.remoteNetworkConfig }}
+                remoteNetworkConfig:
+                  {{ $spec.cluster.remoteNetworkConfig | toYaml | indent 6 }}
+                {{- end }}
+                roleArnSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    eks.aws.livewyer.io/cluster: {{ $id }}
+                storageConfig:
+                  - blockStorage:
+                    - enabled: {{ $spec.cluster.storageConfig.blockStorage.enabled | default true }}
+                upgradePolicy:
+                  - supportType: {{ $spec.cluster.upgradePolicy.supportType | default "STANDARD" }}
+                zonalShiftConfig:
+                  - enabled: {{ $spec.cluster.zonalShiftConfig.enabled | default true }}
+                vpcConfig:
+                  endpointPrivateAccess: {{ $spec.cluster.vpcConfig.endpointPrivateAccess | default false }}
+                  endpointPublicAccess: {{ $spec.cluster.vpcConfig.endpointPublicAccess | default true }}
+                  publicAccessCidrs: {{ $spec.cluster.vpcConfig.publicAccessCidrs | default [0.0.0.0/0] }}
+                  securityGroupIdSelector:
+                    matchControllerRef: true
+                    matchLabels:
+                      eks.aws.livewyer.io/cluster: {{ $id }}
+                      ec2.aws.livewyer.io/vpc: {{ $id }}
+                  subnetIdSelector:
+                    matchControllerRef: true
+                    matchLabels:
+                      eks.aws.livewyer.io/cluster: {{ $id }}
+                      ec2.aws.livewyer.io/vpc: {{ $id }}
+                      subnetType: private
+                tags:
+                  {{ $spec.tags | toYaml | indent 6 }}
+
+            ---
+            {{- $addons := list }}
+            {{- $addons = append $addons (dict "name" "coredns") }}
+            {{- $addons = append $addons (dict "name" "kube-proxy") }}
+            {{- $addons = append $addons (dict "name" "vpc-cni") }}
+            {{- $addons = append $addons (dict "name" "aws-ebs-csi-driver") }}
+            {{- $addons = append $addons (dict "name" "aws-efs-csi-driver") }}
+            {{- $addons = append $addons (dict "name" "aws-mountpoint-s3-csi-driver") }}
+            {{- $addons = append $addons (dict "name" "eks-node-monitoring-agent") }}
+            {{- $addons = append $addons (dict "name" "eks-pod-identity-agent") }}
+            {{- $addons = append $addons (dict "name" "snapshot-controller") }}
+            {{- $addons = append $addons (dict "name" "amazon-cloudwatch-observability") }}
+            {{- $addons = append $addons (dict "name" "aws-guardduty-agent") }}
+            {{- $addons = append $addons (dict "name" "aws-network-flow-monitoring-agent") }}
+            {{- $addons = append $addons (dict "name" "metrics-server") }}
+            {{- $addons = append $addons (dict "name" "prometheus-node-exporter") }}
+
+            {{- range $i, $addon := default $addons $spec.cluster.addons }}
+
+            apiVersion: eks.aws.upbound.io/v1beta1
+            kind: Addon
+            metadata:
+              labels:
+                eks.aws.livewyer.io/cluster: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("eks_addon") }}
+            spec:
+              forProvider:
+                region: {{ $spec.cluster.region }}
+                addonName: {{ $addon.name }}
+                addonVersion: {{ $addon.version | default "" }}
+                configurationValues: {{ $addon.configurationValues | default "{}" }}
+                preserve: {{ $addon.preserve | default "false" }}
+                resolveConflicts: {{ $addon.resolveConflicts | default "OVERWRITE" }}
+                resolveConflictsOnCreate: {{ $addon.resolveConflictsOnCreate | default "OVERWRITE" }}
+                resolveConflictsOnUpdate: {{ $addon.resolveConflictsOnUpdate | default "OVERWRITE" }}
+                serviceAccountRoleArnSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    eks.aws.livewyer.io/cluster: {{ $id }}
+                clusterName: {{ $id }}
+                clusterNameSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    eks.aws.livewyer.io/cluster: {{ $id }}
+                tags:
+                  {{ $spec.tags | toYaml | indent 6 }}
+
+            ---
+            {{- end }}
+
+            apiVersion: eks.aws.upbound.io/v1beta1
+            kind: ClusterAuth
+            metadata:
+              labels:
+                eks.aws.livewyer.io/cluster: {{ $id }}
+              annotations:
+                {{ setResourceNameAnnotation ("vpc") }}
+            spec:
+              deletionPolicy: {{ $spec.deletionPolicy }}
+              forProvider:
+                clusterNameSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    eks.aws.livewyer.io/cluster: {{ $id }}
+                region: us-west-1
+              writeConnectionSecretToRef:
+                name: {{ $id }}-kubeconfig
+                namespace: upbound-system
+
+            `}}
+    - step: automatically-detect-readiness
+      functionRef:
+        name: function-auto-ready
+
+{{- end }}

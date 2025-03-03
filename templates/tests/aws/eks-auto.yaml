@@ -1,0 +1,49 @@
+{{- if and .Values.providers.aws.enabled .Values.tests.enabled }}
+
+apiVersion: eks.aws.livewyer.io/v1alpha1
+kind: XCLUSTER
+metadata:
+  name: eks-test
+spec:
+  providerConfigRef:
+    name: aws
+  cluster:
+    region: us-east-1
+    version: 1.32
+    vpc:
+      cidrBlock: 10.100.0.0/16
+      subnets:
+        - availabilityZone: eu-west-1a
+          cidrBlock: 10.100.0.0/24
+          type: public
+        - availabilityZone: eu-west-1b
+          cidrBlock: 10.100.1.0/24
+          type: public
+        - availabilityZone: eu-west-1c
+          cidrBlock: 10.100.2.0/24
+          type: public
+        - availabilityZone: eu-west-1a
+          cidrBlock: 10.100.3.0/24
+          type: private
+        - availabilityZone: eu-west-1b
+          cidrBlock: 10.100.4.0/24
+          type: private
+        - availabilityZone: eu-west-1c
+          cidrBlock: 10.100.5.0/24
+          type: private
+        - availabilityZone: eu-west-1a
+          cidrBlock: 10.100.6.0/24
+          type: intra
+        - availabilityZone: eu-west-1b
+          cidrBlock: 10.100.7.0/24
+          type: intra
+        - availabilityZone: eu-west-1c
+          cidrBlock: 10.100.8.0/24
+          type: intra
+  tags:
+    - key: Name
+      value: eks-test
+    - key: Environment
+      value: test
+
+{{- end }}
