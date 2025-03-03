@@ -1,6 +1,6 @@
 {{- if and .Values.providers.aws.enabled .Values.tests.enabled }}
 
-apiVersion: aws.livewyer.io/v1alpha1
+apiVersion: ec2.aws.livewyer.io/v1alpha1
 kind: XVPC
 metadata:
   name: vpc-test-1
@@ -41,7 +41,7 @@ spec:
 
 ---
 
-apiVersion: aws.livewyer.io/v1alpha1
+apiVersion: ec2.aws.livewyer.io/v1alpha1
 kind: XVPC
 metadata:
   name: vpc-test-2

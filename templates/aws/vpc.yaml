@@ -3,9 +3,9 @@
 apiVersion: apiextensions.crossplane.io/v1
 kind: CompositeResourceDefinition
 metadata:
-  name: xvpcs.aws.livewyer.io
+  name: xvpcs.ec2.aws.livewyer.io
 spec:
-  group: aws.livewyer.io
+  group: ec2.aws.livewyer.io
   names:
     kind: XVPC
     plural: xvpcs
@@ -211,10 +211,10 @@ spec:
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
-  name: vpc.aws.livewyer.io
+  name: vpc.ec2.aws.livewyer.io
 spec:
   compositeTypeRef:
-    apiVersion: aws.livewyer.io/v1alpha1
+    apiVersion: ec2.aws.livewyer.io/v1alpha1
     kind: XVPC
   mode: Pipeline
   pipeline:
@@ -259,7 +259,7 @@ spec:
             kind: VPC
             metadata:
               labels:
-                aws.livewyer.io/vpc: {{ $id }}
+                ec2.aws.livewyer.io/vpc: {{ $id }}
               annotations:
                 {{ setResourceNameAnnotation ("vpc") }}
             spec:
@@ -290,7 +290,7 @@ spec:
             kind: VPCIPv4CidrBlockAssociation
             metadata:
               labels:
-                aws.livewyer.io/vpc: {{ $id }}
+                ec2.aws.livewyer.io/vpc: {{ $id }}
               annotations:
                 {{ setResourceNameAnnotation ("cidr") }}
             spec:
@@ -303,7 +303,7 @@ spec:
                 vpcIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
 
             ---
             {{- end }}
@@ -313,7 +313,7 @@ spec:
             kind: InternetGateway
             metadata:
               labels:
-                aws.livewyer.io/vpc: {{ $id }}
+                ec2.aws.livewyer.io/vpc: {{ $id }}
               annotations:
                 {{ setResourceNameAnnotation ("igw") }}
             spec:
@@ -324,7 +324,7 @@ spec:
                 vpcIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                 region: {{ $spec.vpc.region }}
                 tags:
                   Name: {{ $id }}
@@ -340,7 +340,7 @@ spec:
             metadata:
               name: {{ $id }}-{{ $subnet.availabilityZone }}-{{ $subnet.type }}
               labels:
-                aws.livewyer.io/vpc: {{ $id }}
+                ec2.aws.livewyer.io/vpc: {{ $id }}
                 availabilityZone: {{ $subnet.availabilityZone }}
                 subnetType: {{ $subnet.type }}
               annotations:
@@ -359,7 +359,7 @@ spec:
                 vpcIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                 tags:
                   Name: {{ $id }}-{{ $subnet.type }}-{{ $subnet.availabilityZone }}
                   {{- if eq $subnet.type "public" }}
@@ -380,7 +380,7 @@ spec:
             metadata:
               name: {{ $id }}-{{ $subnet.availabilityZone }}
               labels:
-                aws.livewyer.io/vpc: {{ $id }}
+                ec2.aws.livewyer.io/vpc: {{ $id }}
                 subnetType: {{ $subnet.type }}
                 availabilityZone: {{ $subnet.availabilityZone }}
               annotations:
@@ -406,7 +406,7 @@ spec:
             metadata:
               name: {{ $id }}-{{ $subnet.availabilityZone }}
               labels:
-                aws.livewyer.io/vpc: {{ $id }}
+                ec2.aws.livewyer.io/vpc: {{ $id }}
                 subnetType: {{ $subnet.type }}
                 availabilityZone: {{ $subnet.availabilityZone }}
               annotations:
@@ -420,14 +420,14 @@ spec:
                 subnetIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                     subnetType: {{ $subnet.type }}
                     availabilityZone: {{ $subnet.availabilityZone }}
                 connectivityType: public
                 allocationIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                     subnetType: {{ $subnet.type }}
                     availabilityZone: {{ $subnet.availabilityZone }}
                 tags:
@@ -447,7 +447,7 @@ spec:
               {{- if or (eq $subnet.type "private") (eq $subnet.attachNatGateway true) }}
               name: {{ $id }}-{{ $subnet.availabilityZone }}-{{ $subnet.type }}
               labels:
-                aws.livewyer.io/vpc: {{ $id }}
+                ec2.aws.livewyer.io/vpc: {{ $id }}
                 subnetType: {{ $subnet.type }}
                 availabilityZone: {{ $subnet.availabilityZone }}
               annotations:
@@ -455,7 +455,7 @@ spec:
               {{- else }}
               name: {{ $id }}-{{ $subnet.type }}
               labels:
-                aws.livewyer.io/vpc: {{ $id }}
+                ec2.aws.livewyer.io/vpc: {{ $id }}
                 subnetType: {{ $subnet.type }}
               annotations:
                 {{ setResourceNameAnnotation (printf "rt-%s" $subnet.type) }}
@@ -468,7 +468,7 @@ spec:
                 vpcIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                 region: {{ $spec.vpc.region }}
                 tags:
                   Name: {{ $id }}-{{ $subnet.type }}
@@ -488,7 +488,7 @@ spec:
             metadata:
               name: {{ $id }}-{{ $subnet.type }}-{{ $subnet.availabilityZone }}
               labels:
-                aws.livewyer.io/vpc: {{ $id }}
+                ec2.aws.livewyer.io/vpc: {{ $id }}
                 subnetType: {{ $subnet.type }}
                 availabilityZone: {{ $subnet.availabilityZone }}
               annotations:
@@ -503,13 +503,13 @@ spec:
                 natGatewayIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                     subnetType: {{ $subnet.type }}
                     availabilityZone: {{ $subnet.availabilityZone }}
                 routeTableIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                     subnetType: {{ $subnet.type }}
                     availabilityZone: {{ $subnet.availabilityZone }}
 
@@ -521,7 +521,7 @@ spec:
             metadata:
               name: {{ $id }}-{{ $subnet.type }}
               labels:
-                aws.livewyer.io/vpc: {{ $id }}
+                ec2.aws.livewyer.io/vpc: {{ $id }}
                 subnetType: {{ $subnet.type }}
               annotations:
                 {{ setResourceNameAnnotation (printf "route-%s" $subnet.type) }}
@@ -535,11 +535,11 @@ spec:
                 gatewayIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                 routeTableIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                     subnetType: {{ $subnet.type }}
 
             ---
@@ -550,7 +550,7 @@ spec:
             metadata:
               name: {{ $id }}-{{ $subnet.type }}-{{ $subnet.availabilityZone }}
               labels:
-                aws.livewyer.io/vpc: {{ $id }}
+                ec2.aws.livewyer.io/vpc: {{ $id }}
               annotations:
                 {{ setResourceNameAnnotation (printf "rta-%s-%s" $subnet.type $subnet.availabilityZone) }}
             spec:
@@ -563,20 +563,20 @@ spec:
                 routeTableIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                     subnetType: {{ $subnet.type }}
                     availabilityZone: {{ $subnet.availabilityZone }}
                 {{- else }}
                 routeTableIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                     subnetType: {{ $subnet.type }}
                 {{- end }}
                 subnetIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                     subnetType: {{ $subnet.type }}
                     availabilityZone: {{ $subnet.availabilityZone }}
 
@@ -589,7 +589,7 @@ spec:
             metadata:
               name: {{ $id }}-{{ $endpoint.serviceName }}
               labels:
-                aws.livewyer.io/vpc: {{ $id }}
+                ec2.aws.livewyer.io/vpc: {{ $id }}
                 vpcEndpoint: {{ $endpoint.serviceName }}
               annotations:
                 {{ setResourceNameAnnotation (printf "vpce-%s" $endpoint.serviceName) }}
@@ -604,7 +604,7 @@ spec:
                 vpcIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                 tags:
                   Name: {{ $id }}-{{ $endpoint.serviceName }}
                   {{- if $spec.tags }}
@@ -621,7 +621,7 @@ spec:
             metadata:
               name: {{ $id }}-{{ $endpoint.serviceName }}-{{ $subnet.availabilityZone }}
               labels:
-                aws.livewyer.io/vpc: {{ $id }}
+                ec2.aws.livewyer.io/vpc: {{ $id }}
                 vpcEndpoint: {{ $endpoint.serviceName }}
               annotations:
                 {{ setResourceNameAnnotation (printf "vpce-gw-%s-%s" $endpoint.serviceName $subnet.availabilityZone) }}
@@ -634,12 +634,12 @@ spec:
                 vpcEndpointIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                     vpcEndpoint: {{ $endpoint.serviceName }}
                 routeTableIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                     subnetType: {{ $subnet.type }}
                     availabilityZone: {{ $subnet.availabilityZone }}
 
@@ -651,7 +651,7 @@ spec:
             metadata:
               name: {{ $id }}-{{ $endpoint.serviceName }}-{{ $subnet.availabilityZone }}
               labels:
-                aws.livewyer.io/vpc: {{ $id }}
+                ec2.aws.livewyer.io/vpc: {{ $id }}
                 vpcEndpoint: {{ $endpoint.serviceName }}
               annotations:
                 {{ setResourceNameAnnotation (printf "vpce-eni-%s-%s" $endpoint.serviceName $subnet.availabilityZone) }}
@@ -664,12 +664,12 @@ spec:
                 vpcEndpointIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                     vpcEndpoint: {{ $endpoint.serviceName }}
                 subnetIdSelector:
                   matchControllerRef: true
                   matchLabels:
-                    aws.livewyer.io/vpc: {{ $id }}
+                    ec2.aws.livewyer.io/vpc: {{ $id }}
                     subnetType: {{ $subnet.type }}
                     availabilityZone: {{ $subnet.availabilityZone }}
 
